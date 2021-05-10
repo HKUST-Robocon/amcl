@@ -52,6 +52,8 @@
 #include "nav_msgs/GetMap.h"
 #include "nav_msgs/SetMap.h"
 #include "std_srvs/Empty.h"
+#include "std_msgs/String.h"
+#include "cuda_amcl/vegvisir_msg.h"
 
 // For transform support
 #include "tf2/LinearMath/Transform.h"
@@ -247,6 +249,8 @@ class AmclNode
     ros::NodeHandle private_nh_;
     ros::Publisher pose_pub_;
     ros::Publisher particlecloud_pub_;
+    ros::Publisher debug_ros_pub;
+    ros::Publisher vegvisir_pub;
     ros::ServiceServer global_loc_srv_;
     ros::ServiceServer nomotion_update_srv_; //to let amcl update samples without requiring motion
     ros::ServiceServer set_map_srv_;
@@ -457,6 +461,8 @@ AmclNode::AmclNode() :
   tfl_.reset(new tf2_ros::TransformListener(*tf_));
 
   pose_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("amcl_pose", 2, true);
+  debug_ros_pub = nh_.advertise<std_msgs::String>("debug_ros_topic", 2, true);
+  vegvisir_pub = nh_.advertise<cuda_amcl::vegvisir_msg>("vegvisir_topic", 2, true);
   particlecloud_pub_ = nh_.advertise<geometry_msgs::PoseArray>("particlecloud", 2, true);
   global_loc_srv_ = nh_.advertiseService("global_localization", 
 					 &AmclNode::globalLocalizationCallback,
@@ -1009,7 +1015,7 @@ AmclNode::getOdomPose(geometry_msgs::PoseStamped& odom_pose,
   x = odom_pose.pose.position.x;
   y = odom_pose.pose.position.y;
   yaw = tf2::getYaw(odom_pose.pose.orientation);
-
+ 
   return true;
 }
 
@@ -1092,6 +1098,7 @@ void
 AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 {
   std::string laser_scan_frame_id = stripSlash(laser_scan->header.frame_id);
+  ROS_INFO("BETWEEN LASERS %f", (ros::Time::now() - last_laser_received_ts_).toSec());
   last_laser_received_ts_ = ros::Time::now();
   if( map_ == NULL ) {
     return;
@@ -1145,11 +1152,18 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
   // Where was the robot when this scan was taken?
   pf_vector_t pose;
+
+  cuda_amcl::vegvisir_msg amclWithOdomPose;
   if(!getOdomPose(latest_odom_pose_, pose.v[0], pose.v[1], pose.v[2],
                   laser_scan->header.stamp, base_frame_id_))
   {
     ROS_ERROR("Couldn't determine robot's pose associated with laser scan");
     return;
+  }else{
+
+    amclWithOdomPose.odom_cal.x = pose.v[0]*1000;
+    amclWithOdomPose.odom_cal.y = pose.v[1]*1000;
+    amclWithOdomPose.odom_cal.z = pose.v[2];
   }
 
 
@@ -1398,10 +1412,16 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
          puts("");
          }
        */
-
+      //search
+      amclWithOdomPose.amcl_pose = p;
       pose_pub_.publish(p);
-      last_published_pose = p;
+      vegvisir_pub.publish(amclWithOdomPose);
+      std_msgs::String debug_msg;
+      debug_msg.data = "debug and debug";
+      // debug_ros_pub.publish(debug_msg);
 
+      last_published_pose = p;
+      // ROS_INFO("%s", "debug");
       ROS_DEBUG("New pose: %6.3f %6.3f %6.3f",
                hyps[max_weight_hyp].pf_pose_mean.v[0],
                hyps[max_weight_hyp].pf_pose_mean.v[1],
@@ -1481,6 +1501,8 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
   }
 
   diagnosic_updater_.update();
+  
+  ROS_INFO("PROC TIME %f", (ros::Time::now() - last_laser_received_ts_).toSec());
 }
 
 void

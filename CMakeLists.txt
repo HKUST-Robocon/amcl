@@ -33,6 +33,7 @@ find_package(catkin REQUIRED
     tf2_geometry_msgs
     tf2_msgs
     tf2_ros
+    message_generation
 )
 
 find_package(Boost REQUIRED)
@@ -43,6 +44,16 @@ find_package(CUDA REQUIRED)
 # dynamic reconfigure
 generate_dynamic_reconfigure_options(
     cfg/AMCL.cfg
+)
+
+add_message_files(
+  FILES
+  vegvisir_msg.msg
+)
+generate_messages(
+  DEPENDENCIES
+  geometry_msgs
+  std_msgs
 )
 
 catkin_package(
@@ -58,9 +69,11 @@ catkin_package(
     tf2
     tf2_msgs
     tf2_ros
+    message_runtime
   INCLUDE_DIRS include
   LIBRARIES amcl_sensors amcl_map amcl_pf
 )
+
 
 include_directories(include)
 include_directories(${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
