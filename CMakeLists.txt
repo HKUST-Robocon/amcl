@@ -213,3 +213,4 @@ if(CATKIN_ENABLE_TESTING)
 #
 #  add_rostest(test/global_localization_stage.xml)
 endif()
+
