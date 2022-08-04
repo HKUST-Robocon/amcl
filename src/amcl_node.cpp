@@ -1501,7 +1501,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
   }
 
   diagnosic_updater_.update();
-  
+  ROS_INFO("Max Sample: %d", max_particles_);
   ROS_INFO("PROC TIME %f", (ros::Time::now() - last_laser_received_ts_).toSec());
 }
 

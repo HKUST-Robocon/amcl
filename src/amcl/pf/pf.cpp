@@ -30,6 +30,9 @@
 #include <cstdlib>
 #include <ctime>
 
+#include "ros/ros.h"
+
+
 #include "amcl/pf/pf.h"
 #include "amcl/pf/pf_pdf.h"
 #include "amcl/pf/pf_kdtree.h"
@@ -449,6 +452,8 @@ void pf_update_resample(pf_t *pf)
 
   // Use the newly created sample set
   pf->current_set = (pf->current_set + 1) % 2; 
+  ROS_INFO("set_a_sample_count: %d",set_a->sample_count);
+  ROS_INFO("set_b_sample_count: %d",set_b->sample_count);
 
   pf_update_converged(pf);
 
