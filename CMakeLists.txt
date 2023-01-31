@@ -214,3 +214,7 @@ if(CATKIN_ENABLE_TESTING)
 #  add_rostest(test/global_localization_stage.xml)
 endif()
 
+catkin_install_python(PROGRAMS 
+  src/reset_pose.py 
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
